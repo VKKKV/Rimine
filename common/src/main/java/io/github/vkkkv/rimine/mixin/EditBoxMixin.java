@@ -15,25 +15,27 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(EditBox.class)
 public abstract class EditBoxMixin extends AbstractWidget {
-    @Shadow @Final private Font font;
-    @Shadow private int cursorPos;
-    @Shadow private String value;
-    @Shadow private int displayPos;
+  @Shadow @Final private Font font;
+  @Shadow private int cursorPos;
+  @Shadow private String value;
+  @Shadow private int displayPos;
 
-    public EditBoxMixin(int x, int y, int width, int height, Component message) {
-        super(x, y, width, height, message);
-    }
+  public EditBoxMixin(int x, int y, int width, int height, Component message) {
+    super(x, y, width, height, message);
+  }
 
-    @Inject(method = "renderWidget", at = @At("HEAD"))
-    private void onRenderWidget(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick, CallbackInfo ci) {
-        if (this.isFocused()) {
-            int x = this.getX() + 4;
-            int y = this.getY() + (this.height - 8) / 2;
-            
-            String textBeforeCursor = this.value.substring(this.displayPos, Math.min(this.cursorPos, this.value.length()));
-            int cursorOffset = this.font.width(textBeforeCursor);
-            
-            RimeInputHandler.setCursorPosition(x + cursorOffset, y + 10);
-        }
+  @Inject(method = "renderWidget", at = @At("HEAD"))
+  private void onRenderWidget(
+      GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick, CallbackInfo ci) {
+    if (this.isFocused()) {
+      int x = this.getX() + 4;
+      int y = this.getY() + (this.height - 8) / 2;
+
+      String textBeforeCursor =
+          this.value.substring(this.displayPos, Math.min(this.cursorPos, this.value.length()));
+      int cursorOffset = this.font.width(textBeforeCursor);
+
+      RimeInputHandler.setCursorPosition(x + cursorOffset, y + 10);
     }
+  }
 }
