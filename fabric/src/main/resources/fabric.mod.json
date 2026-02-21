@@ -10,6 +10,9 @@
   "contact": {
     "sources": "https://github.com/vkkkv/Rimine"
   },
+  "mixins": [
+    "rimine.common.mixins.json"
+  ],
   "license": "MIT",
   "icon": "assets/rimine/icon.png",
   "environment": "client",

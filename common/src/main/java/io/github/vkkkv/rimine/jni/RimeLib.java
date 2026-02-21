@@ -5,8 +5,10 @@ import com.sun.jna.Native;
 import com.sun.jna.Pointer;
 import com.sun.jna.Structure;
 
+import io.github.vkkkv.rimine.core.LibraryLoader;
+
 public interface RimeLib extends Library {
-    RimeLib INSTANCE = Native.load("rime", RimeLib.class);
+    RimeLib INSTANCE = LibraryLoader.load("rime", RimeLib.class);
 
     @Structure.FieldOrder({
         "shared_data_dir", "user_data_dir", "distribution_name", 
@@ -22,6 +24,15 @@ public interface RimeLib extends Library {
         public String app_name;
         public Pointer modules;
         public int min_log_level;
+    }
+
+    @Structure.FieldOrder({"length", "cursor_pos", "sel_start", "sel_end", "preedit"})
+    class RimeComposition extends Structure {
+        public int length;
+        public int cursor_pos;
+        public int sel_start;
+        public int sel_end;
+        public String preedit;
     }
 
     @Structure.FieldOrder({
@@ -51,15 +62,11 @@ public interface RimeLib extends Library {
     }
 
     @Structure.FieldOrder({
-        "data_size", "composition", "caret_pos", "sel_start", "sel_end", 
-        "menu", "commit_text_preview", "reserved"
+        "data_size", "composition", "menu", "commit_text_preview", "reserved"
     })
     class RimeContext extends Structure {
         public int data_size;
-        public String composition;
-        public int caret_pos;
-        public int sel_start;
-        public int sel_end;
+        public RimeComposition composition;
         public RimeMenu menu;
         public String commit_text_preview;
         public Pointer reserved;
@@ -68,6 +75,19 @@ public interface RimeLib extends Library {
             super();
             data_size = size();
         }
+    }
+
+    @Structure.FieldOrder({"schema_id", "name", "reserved"})
+    class RimeSchemaListItem extends Structure {
+        public String schema_id;
+        public String name;
+        public Pointer reserved;
+    }
+
+    @Structure.FieldOrder({"size", "list"})
+    class RimeSchemaList extends Structure {
+        public int size;
+        public Pointer list; // RimeSchemaListItem*
     }
 
     void RimeInitialize(RimeTraits traits);
@@ -79,4 +99,9 @@ public interface RimeLib extends Library {
     boolean RimeProcessKey(long session_id, int keycode, int mask);
     boolean RimeGetContext(long session_id, RimeContext context);
     boolean RimeFreeContext(RimeContext context);
+
+    boolean RimeGetSchemaList(RimeSchemaList list);
+    void RimeFreeSchemaList(RimeSchemaList list);
+    boolean RimeGetCurrentSchema(long session_id, byte[] schema_id, int buffer_size);
+    boolean RimeSelectSchema(long session_id, String schema_id);
 }

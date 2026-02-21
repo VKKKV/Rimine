@@ -11,6 +11,9 @@ description='''
 Rime Input Method for Minecraft.
 '''
 
+[[mixins]]
+config="rimine.common.mixins.json"
+
 [[dependencies.rimine]]
     modId="forge"
     mandatory=true

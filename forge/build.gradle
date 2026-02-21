@@ -1,34 +1,34 @@
-plugins {
-    id "com.github.johnrengelman.shadow" version "8.1.1"
-}
+apply plugin: "architectury-plugin"
+apply plugin: "dev.architectury.loom"
+apply plugin: "com.github.johnrengelman.shadow"
 
 architectury {
-    platformSetupLoomConfigs()
     forge()
 }
 
 configurations {
-    common
-    shadowCommon // Don't use shadow from the shadow plugin because it'll shadow everything.
-    compileClasspath.extendsFrom common
-    runtimeClasspath.extendsFrom common
-    developmentForge.extendsFrom common
+    shadowCommon
+}
+
+loom {
+    silentMojangMappingsLicense()
 }
 
 dependencies {
+    minecraft "com.mojang:minecraft:${rootProject.minecraft_version}"
+    mappings loom.officialMojangMappings()
+
     forge "net.minecraftforge:forge:${rootProject.minecraft_version}-${rootProject.forge_version}"
     
-    common(project(path: ":common", configuration: "namedElements")) { transitive false }
-    shadowCommon(project(path: ":common", configuration: "transformProductionForge")) { transitive false }
+    implementation project(path: ":common", configuration: "namedElements")
+    shadowCommon project(path: ":common", configuration: "transformProductionForge")
 
-    // JNA must be shadowed as well
     implementation "net.java.dev.jna:jna:5.14.0"
     shadowCommon "net.java.dev.jna:jna:5.14.0"
 }
 
 processResources {
     inputs.property "version", project.version
-
     filesMatching("META-INF/mods.toml") {
         expand "version": project.version
     }
@@ -37,7 +37,6 @@ processResources {
 shadowJar {
     exclude "fabric.mod.json"
     exclude "architectury.common.json"
-
     configurations = [project.configurations.shadowCommon]
     archiveClassifier = "dev-shadow"
 }
@@ -46,20 +45,4 @@ remapJar {
     input.set shadowJar.archiveFile
     dependsOn shadowJar
     archiveClassifier = null
-}
-
-jar {
-    archiveClassifier = "dev"
-}
-
-sourcesJar {
-    def commonSources = project(":common").sourcesJar
-    dependsOn commonSources
-    from commonSources.archiveFile.map { zipTree(it) }
-}
-
-components.java {
-    withVariantsFromConfiguration(project.configurations.shadowRuntimeElements) {
-        skip()
-    }
 }

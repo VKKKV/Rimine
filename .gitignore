@@ -1,0 +1,28 @@
+# Gradle
+.gradle/
+build/
+
+# IDEs
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.project
+.classpath
+.settings/
+
+# Minecraft Run
+run/
+logs/
+screenshots/
+resourcepacks/
+shaderpacks/
+saves/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# RIME Config (Local testing)
+config/rimine/
