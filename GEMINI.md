@@ -5,28 +5,23 @@ Rimine is a multi-loader Minecraft mod for version 1.20.1 that integrates the **
 ## Architecture
 
 - **`common`**: (`io.github.vkkkv.rimine.core`, `io.github.vkkkv.rimine.jni`)
-  - **`RimeLib`**: JNA interface mapping `librime` C API (Traits, Context, Menu, Candidates).
+  - **`RimeLib`**: JNA interface mapping `librime` C API including Menu and Candidate structures.
   - **`RimeInputHandler`**: 
-    - Translates GLFW keycodes to X11 keysyms.
-    - Manages bitwise modifier translation (Shift, Ctrl, Alt).
-    - Handles robust native memory lifecycle (idempotent cleanup, C-side string freeing).
-    - Provides `RimeData` record for rendering.
+    - **Advanced Key Mapping**: Exhaustive translation of GLFW keycodes to X11 keysyms (Symbols, F-keys, Numpad).
+    - **Cursor Tracking**: Maintains screen coordinates for the active `EditBox` cursor.
+    - **Memory Safety**: Strict lifecycle management using `RimeFreeContext` and JVM shutdown hooks.
+  - **`mixin`**: `EditBoxMixin` intercepts `renderWidget` to calculate and update cursor screen coordinates.
 - **`forge`**: (`io.github.vkkkv.rimine.forge`)
-  - Hooks into `ScreenEvent.KeyPressed.Pre` for input interception.
-  - Renders UI via `RenderGuiOverlayEvent.Post` using `GuiGraphics`.
-  - Implements JVM shutdown hooks for native finalization.
+  - **UI**: Renders a vertical candidate box with a dark background and highlighting using `GuiGraphics`.
 - **`fabric`**: (`io.github.vkkkv.rimine.fabric`)
-  - Hooks into `ScreenKeyboardEvents.ALLOW_KEY_PRESS` for input interception.
-  - Renders UI via `HudRenderCallback` using `DrawContext`.
-  - Uses `ClientLifecycleEvents` for startup/shutdown.
+  - **UI**: Renders the vertical candidate box using `DrawContext`.
 
 ## Tech Stack
 
 - **Java 17**: Required for Minecraft 1.20.1.
 - **Architectury Loom**: Gradle plugin for multi-loader development.
 - **JNA (Java Native Access)**: Bridges Java and the native `librime` C library.
-- **Fabric API**: Used for Fabric-specific hooks.
-- **Official Mojang Mappings**: Standard deobfuscation mappings.
+- **Mixins**: Used to extract internal state (cursor position) from vanilla Minecraft classes.
 
 ## Building and Running
 
@@ -42,6 +37,6 @@ Rimine is a multi-loader Minecraft mod for version 1.20.1 that integrates the **
 ## Development Conventions
 
 1.  **Package Path**: `io.github.vkkkv.rimine`
-2.  **Memory Safety**: Always call `RimeFreeContext` before fetching a new context or cleaning up to avoid native leaks.
-3.  **UI Performance**: Keep the HUD render loop lightweight; avoid object allocation in `onRenderGui` / `HudRenderCallback`.
-4.  **Key Mapping**: Expand `translateKey` in `RimeInputHandler` as new keys are needed, following X11 keysym standards.
+2.  **Cursor-Relative UI**: Always use `RimeData.x()` and `RimeData.y()` for rendering to ensure the candidate list follows the typing focus.
+3.  **Vanilla-Only Drawing**: Use native `fill()` and `drawText()`/`drawString()` methods. Avoid external UI libraries to keep the mod "minimal and zero-bloat."
+4.  **Key Mapping**: Ensure any new keys added to `translateKey` follow the X11 keysym standard as expected by RIME.

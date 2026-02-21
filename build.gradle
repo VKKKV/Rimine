@@ -1,29 +1,15 @@
 plugins {
-    id "architectury-plugin" version "${architectury_plugin_version}"
-    id "dev.architectury.loom" version "${architectury_loom_version}" apply false
+    id "architectury-plugin" version "3.4-SNAPSHOT"
+    id "dev.architectury.loom" version "1.7-SNAPSHOT" apply false
+    id "com.github.johnrengelman.shadow" version "8.1.1" apply false
 }
 
 architectury {
     minecraft = project.minecraft_version
 }
 
-subprojects {
-    apply plugin: "dev.architectury.loom"
-
-    loom {
-        silentMojangMappingsLicense()
-    }
-
-    dependencies {
-        minecraft "com.mojang:minecraft:${project.minecraft_version}"
-        // Using Official Mojang mappings as requested.
-        mappings loom.officialMojangMappings()
-    }
-}
-
 allprojects {
     apply plugin: "java"
-    apply plugin: "architectury-plugin"
     apply plugin: "maven-publish"
 
     archivesBaseName = rootProject.archives_base_name
