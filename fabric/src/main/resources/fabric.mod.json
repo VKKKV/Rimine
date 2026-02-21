@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "id": "rimine",
+  "version": "${version}",
+  "name": "Rimine",
+  "description": "Rime Input Method for Minecraft.",
+  "authors": [
+    "vkkkv"
+  ],
+  "contact": {
+    "sources": "https://github.com/vkkkv/Rimine"
+  },
+  "license": "MIT",
+  "icon": "assets/rimine/icon.png",
+  "environment": "client",
+  "entrypoints": {
+    "client": [
+      "io.github.vkkkv.rimine.fabric.RimineFabricClient"
+    ]
+  },
+  "depends": {
+    "fabricloader": ">=0.14.22",
+    "minecraft": "~1.20.1",
+    "java": ">=17",
+    "fabric-api": "*"
+  }
+}
