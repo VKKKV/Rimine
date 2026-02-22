@@ -14,6 +14,7 @@ public interface RimeLib extends Library {
     "modules", "min_log_level"
   })
   class RimeTraits extends Structure {
+    public int data_size;
     public String shared_data_dir;
     public String user_data_dir;
     public String distribution_name;
@@ -22,6 +23,11 @@ public interface RimeLib extends Library {
     public String app_name;
     public Pointer modules;
     public int min_log_level;
+
+    public RimeTraits() {
+      super();
+      this.data_size = this.size();
+    }
   }
 
   @Structure.FieldOrder({"length", "cursor_pos", "sel_start", "sel_end", "preedit"})
@@ -56,7 +62,7 @@ public interface RimeLib extends Library {
   class RimeCandidate extends Structure {
     public String text;
     public String comment;
-    public String reserved;
+    public Pointer reserved;
 
     public RimeCandidate(Pointer p) {
       super(p);
