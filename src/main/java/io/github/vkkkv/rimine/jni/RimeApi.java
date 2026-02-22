@@ -19,7 +19,7 @@ public class RimeApi extends Structure {
   public Setup setup;
 
   public interface SetNotificationHandler extends Callback {
-    void invoke(RimeLib.RimeNotificationHandler handler, Pointer context_object);
+    void invoke(RimeNotificationHandler handler, Pointer context_object);
   }
 
   public SetNotificationHandler set_notification_handler;
@@ -144,37 +144,37 @@ public class RimeApi extends Structure {
 
   // Output
   public interface GetCommit extends Callback {
-    boolean invoke(long session_id, RimeLib.RimeCommit commit);
+    boolean invoke(long session_id, RimeCommit commit);
   }
 
   public GetCommit get_commit;
 
   public interface FreeCommit extends Callback {
-    boolean invoke(RimeLib.RimeCommit commit);
+    boolean invoke(RimeCommit commit);
   }
 
   public FreeCommit free_commit;
 
   public interface GetContext extends Callback {
-    boolean invoke(long session_id, RimeLib.RimeContext context);
+    boolean invoke(long session_id, RimeContext context);
   }
 
   public GetContext get_context;
 
   public interface FreeContext extends Callback {
-    boolean invoke(RimeLib.RimeContext context);
+    boolean invoke(RimeContext context);
   }
 
   public FreeContext free_context;
 
   public interface GetStatus extends Callback {
-    boolean invoke(long session_id, RimeLib.RimeStatus status);
+    boolean invoke(long session_id, RimeStatus status);
   }
 
   public GetStatus get_status;
 
   public interface FreeStatus extends Callback {
-    boolean invoke(RimeLib.RimeStatus status);
+    boolean invoke(RimeStatus status);
   }
 
   public FreeStatus free_status;
@@ -205,13 +205,13 @@ public class RimeApi extends Structure {
   public GetProperty get_property;
 
   public interface GetSchemaList extends Callback {
-    boolean invoke(RimeLib.RimeSchemaList schema_list);
+    boolean invoke(RimeSchemaList schema_list);
   }
 
   public GetSchemaList get_schema_list;
 
   public interface FreeSchemaList extends Callback {
-    void invoke(RimeLib.RimeSchemaList schema_list);
+    void invoke(RimeSchemaList schema_list);
   }
 
   public FreeSchemaList free_schema_list;
@@ -230,73 +230,73 @@ public class RimeApi extends Structure {
 
   // Configuration
   public interface SchemaOpen extends Callback {
-    boolean invoke(String schema_id, RimeLib.RimeConfig config);
+    boolean invoke(String schema_id, RimeConfig config);
   }
 
   public SchemaOpen schema_open;
 
   public interface ConfigOpen extends Callback {
-    boolean invoke(String config_id, RimeLib.RimeConfig config);
+    boolean invoke(String config_id, RimeConfig config);
   }
 
   public ConfigOpen config_open;
 
   public interface ConfigClose extends Callback {
-    boolean invoke(RimeLib.RimeConfig config);
+    boolean invoke(RimeConfig config);
   }
 
   public ConfigClose config_close;
 
   public interface ConfigGetBool extends Callback {
-    boolean invoke(RimeLib.RimeConfig config, String key, boolean[] value);
+    boolean invoke(RimeConfig config, String key, boolean[] value);
   }
 
   public ConfigGetBool config_get_bool;
 
   public interface ConfigGetInt extends Callback {
-    boolean invoke(RimeLib.RimeConfig config, String key, int[] value);
+    boolean invoke(RimeConfig config, String key, int[] value);
   }
 
   public ConfigGetInt config_get_int;
 
   public interface ConfigGetDouble extends Callback {
-    boolean invoke(RimeLib.RimeConfig config, String key, double[] value);
+    boolean invoke(RimeConfig config, String key, double[] value);
   }
 
   public ConfigGetDouble config_get_double;
 
   public interface ConfigGetString extends Callback {
-    boolean invoke(RimeLib.RimeConfig config, String key, byte[] value, long buffer_size);
+    boolean invoke(RimeConfig config, String key, byte[] value, long buffer_size);
   }
 
   public ConfigGetString config_get_string;
 
   public interface ConfigGetCString extends Callback {
-    String invoke(RimeLib.RimeConfig config, String key);
+    String invoke(RimeConfig config, String key);
   }
 
   public ConfigGetCString config_get_cstring;
 
   public interface ConfigUpdateSignature extends Callback {
-    boolean invoke(RimeLib.RimeConfig config, String signer);
+    boolean invoke(RimeConfig config, String signer);
   }
 
   public ConfigUpdateSignature config_update_signature;
 
   public interface ConfigBeginMap extends Callback {
-    boolean invoke(RimeLib.RimeConfigIterator iterator, RimeLib.RimeConfig config, String key);
+    boolean invoke(RimeConfigIterator iterator, RimeConfig config, String key);
   }
 
   public ConfigBeginMap config_begin_map;
 
   public interface ConfigNext extends Callback {
-    boolean invoke(RimeLib.RimeConfigIterator iterator);
+    boolean invoke(RimeConfigIterator iterator);
   }
 
   public ConfigNext config_next;
 
   public interface ConfigEnd extends Callback {
-    void invoke(RimeLib.RimeConfigIterator iterator);
+    void invoke(RimeConfigIterator iterator);
   }
 
   public ConfigEnd config_end;
@@ -310,13 +310,13 @@ public class RimeApi extends Structure {
 
   // Module
   public interface RegisterModule extends Callback {
-    boolean invoke(RimeLib.RimeModule module);
+    boolean invoke(RimeModule module);
   }
 
   public RegisterModule register_module;
 
   public interface FindModule extends Callback {
-    RimeLib.RimeModule invoke(String module_name);
+    RimeModule invoke(String module_name);
   }
 
   public FindModule find_module;
@@ -360,81 +360,81 @@ public class RimeApi extends Structure {
 
   // Configuration: initialization
   public interface ConfigInit extends Callback {
-    boolean invoke(RimeLib.RimeConfig config);
+    boolean invoke(RimeConfig config);
   }
 
   public ConfigInit config_init;
 
   public interface ConfigLoadString extends Callback {
-    boolean invoke(RimeLib.RimeConfig config, String yaml);
+    boolean invoke(RimeConfig config, String yaml);
   }
 
   public ConfigLoadString config_load_string;
 
   // Configuration: setters
   public interface ConfigSetBool extends Callback {
-    boolean invoke(RimeLib.RimeConfig config, String key, boolean value);
+    boolean invoke(RimeConfig config, String key, boolean value);
   }
 
   public ConfigSetBool config_set_bool;
 
   public interface ConfigSetInt extends Callback {
-    boolean invoke(RimeLib.RimeConfig config, String key, int value);
+    boolean invoke(RimeConfig config, String key, int value);
   }
 
   public ConfigSetInt config_set_int;
 
   public interface ConfigSetDouble extends Callback {
-    boolean invoke(RimeLib.RimeConfig config, String key, double value);
+    boolean invoke(RimeConfig config, String key, double value);
   }
 
   public ConfigSetDouble config_set_double;
 
   public interface ConfigSetString extends Callback {
-    boolean invoke(RimeLib.RimeConfig config, String key, String value);
+    boolean invoke(RimeConfig config, String key, String value);
   }
 
   public ConfigSetString config_set_string;
 
   // Configuration: complex structures
   public interface ConfigGetItem extends Callback {
-    boolean invoke(RimeLib.RimeConfig config, String key, RimeLib.RimeConfig value);
+    boolean invoke(RimeConfig config, String key, RimeConfig value);
   }
 
   public ConfigGetItem config_get_item;
 
   public interface ConfigSetItem extends Callback {
-    boolean invoke(RimeLib.RimeConfig config, String key, RimeLib.RimeConfig value);
+    boolean invoke(RimeConfig config, String key, RimeConfig value);
   }
 
   public ConfigSetItem config_set_item;
 
   public interface ConfigClear extends Callback {
-    boolean invoke(RimeLib.RimeConfig config, String key);
+    boolean invoke(RimeConfig config, String key);
   }
 
   public ConfigClear config_clear;
 
   public interface ConfigCreateList extends Callback {
-    boolean invoke(RimeLib.RimeConfig config, String key);
+    boolean invoke(RimeConfig config, String key);
   }
 
   public ConfigCreateList config_create_list;
 
   public interface ConfigCreateMap extends Callback {
-    boolean invoke(RimeLib.RimeConfig config, String key);
+    boolean invoke(RimeConfig config, String key);
   }
 
   public ConfigCreateMap config_create_map;
 
   public interface ConfigListSize extends Callback {
-    long invoke(RimeLib.RimeConfig config, String key);
+    long invoke(RimeConfig config, String key);
   }
 
   public ConfigListSize config_list_size;
 
   public interface ConfigBeginList extends Callback {
-    boolean invoke(RimeLib.RimeConfigIterator iterator, RimeLib.RimeConfig config, String key);
+    boolean invoke(RimeConfigIterator iterator, RimeConfig config, String key);
   }
 
   public ConfigBeginList config_begin_list;
@@ -478,32 +478,32 @@ public class RimeApi extends Structure {
 
   // Candidate list access
   public interface CandidateListBegin extends Callback {
-    boolean invoke(long session_id, RimeLib.RimeCandidateListIterator iterator);
+    boolean invoke(long session_id, RimeCandidateListIterator iterator);
   }
 
   public CandidateListBegin candidate_list_begin;
 
   public interface CandidateListNext extends Callback {
-    boolean invoke(RimeLib.RimeCandidateListIterator iterator);
+    boolean invoke(RimeCandidateListIterator iterator);
   }
 
   public CandidateListNext candidate_list_next;
 
   public interface CandidateListEnd extends Callback {
-    void invoke(RimeLib.RimeCandidateListIterator iterator);
+    void invoke(RimeCandidateListIterator iterator);
   }
 
   public CandidateListEnd candidate_list_end;
 
   // User config
   public interface UserConfigOpen extends Callback {
-    boolean invoke(String config_id, RimeLib.RimeConfig config);
+    boolean invoke(String config_id, RimeConfig config);
   }
 
   public UserConfigOpen user_config_open;
 
   public interface CandidateListFromIndex extends Callback {
-    boolean invoke(long session_id, RimeLib.RimeCandidateListIterator iterator, int index);
+    boolean invoke(long session_id, RimeCandidateListIterator iterator, int index);
   }
 
   public CandidateListFromIndex candidate_list_from_index;
@@ -560,7 +560,7 @@ public class RimeApi extends Structure {
   public DeleteCandidateOnCurrentPage delete_candidate_on_current_page;
 
   public interface GetStateLabelAbbreviated extends Callback {
-    RimeLib.RimeStringSlice invoke(
+    RimeStringSlice invoke(
         long session_id, String option_name, boolean state, boolean abbreviated);
   }
 
