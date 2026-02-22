@@ -28,6 +28,7 @@ public class LibraryLoader {
         throw new RuntimeException("Bundled library not found in resources: " + resourcePath);
       }
 
+      // TODO: Add custom temp dir
       Path tempDir = Files.createTempDirectory("rimine_natives");
       Path tempLib = tempDir.resolve(libName);
       Files.copy(is, tempLib, StandardCopyOption.REPLACE_EXISTING);
@@ -42,6 +43,7 @@ public class LibraryLoader {
     }
   }
 
+  // TODO: Add more platforms
   private static String getPlatformFolder() {
     if (Platform.isWindows()) return "windows-x86-64";
     if (Platform.isLinux()) return "linux-x86-64";
