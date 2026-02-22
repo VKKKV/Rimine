@@ -1,10 +1,9 @@
 # Rimine
 
-A native **RIME (Rime Input Method Engine)** integration for Minecraft 1.20.1, supporting both **Fabric** and **Forge** via Architectury.
+A native **RIME (Rime Input Method Engine)** integration for Minecraft 1.20.1 with **Forge**.
 
 ## Features
 
-- **Multi-Loader Support**: Seamless operation on both Fabric and Forge platforms.
 - **Native Performance**: Uses JNA (Java Native Access) to bridge directly with `librime`, ensuring low latency and high efficiency.
 - **Cursor-Relative UI**: The candidate list renders dynamically at the position of your chat cursor for a natural typing experience.
 - **Advanced Key Mapping**: Exhaustive translation of GLFW keycodes to RIME-compatible keysyms, including symbols, Numpad, and function keys.
@@ -20,19 +19,18 @@ A native **RIME (Rime Input Method Engine)** integration for Minecraft 1.20.1, s
 
 ## Building
 
-To build the mod for both platforms, run:
+To build the mod for Forge, run:
 
 ```bash
 ./gradlew build
 ```
 
-The resulting JARs will be located in:
-- `fabric/build/libs/rimine-fabric-<version>.jar`
+The resulting JAR will be located in:
 - `forge/build/libs/rimine-forge-<version>.jar`
 
 ## Development
 
-Rimine uses **Architectury Loom**. Most of the core logic resides in the `common` module to ensure consistency across loaders.
+Rimine uses **Architectury Loom** for Forge. Most of the core logic resides in the `common` module.
 
 - **Package**: `io.github.vkkkv.rimine`
 - **Native Interface**: `io.github.vkkkv.rimine.jni.RimeLib`
