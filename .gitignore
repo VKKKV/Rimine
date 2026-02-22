@@ -13,6 +13,7 @@ build/
 .settings/
 
 # Minecraft Run
+bin/
 run/
 logs/
 screenshots/
