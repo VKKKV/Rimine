@@ -1,6 +1,6 @@
 # Rimine Project Overview
 
-Rimine is a multi-loader Minecraft mod for version 1.20.1 that integrates the **RIME (Rime Input Method Engine)** directly into the game. It uses **Architectury Loom** to manage a shared codebase between **Fabric** and **Forge**.
+Rimine is a Minecraft mod for version 1.20.1 that integrates the **RIME (Rime Input Method Engine)** directly into the game for Forge.
 
 ## Architecture
 
@@ -13,21 +13,18 @@ Rimine is a multi-loader Minecraft mod for version 1.20.1 that integrates the **
   - **`mixin`**: `EditBoxMixin` intercepts `renderWidget` to calculate and update cursor screen coordinates.
 - **`forge`**: (`io.github.vkkkv.rimine.forge`)
   - **UI**: Renders a vertical candidate box with a dark background and highlighting using `GuiGraphics`.
-- **`fabric`**: (`io.github.vkkkv.rimine.fabric`)
-  - **UI**: Renders the vertical candidate box using `DrawContext`.
 
 ## Tech Stack
 
 - **Java 17**: Required for Minecraft 1.20.1.
-- **Architectury Loom**: Gradle plugin for multi-loader development.
+- **Architectury Loom**: Gradle plugin for Forge development.
 - **JNA (Java Native Access)**: Bridges Java and the native `librime` C library.
 - **Mixins**: Used to extract internal state (cursor position) from vanilla Minecraft classes.
 
 ## Building and Running
 
 ### Build Commands
-- Build all jars: `./gradlew build`
-- Run Fabric client: `./gradlew :fabric:runClient`
+- Build jar: `./gradlew build`
 - Run Forge client: `./gradlew :forge:runClient`
 
 ### Requirements
