@@ -45,8 +45,8 @@ public class RimineForge {
                               RimeInputHandler.reload(configPath);
                               context
                                   .getSource()
-                                  .sendFeedback(
-                                      Component.literal("Rimine configuration reloaded."), false);
+                                  .sendSystemMessage(
+                                      Component.literal("Rimine configuration reloaded."));
                               return 1;
                             })));
   }
