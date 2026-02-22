@@ -19,18 +19,26 @@ A native **RIME (Rime Input Method Engine)** integration for Minecraft 1.20.1 wi
 
 ## Building
 
-To build the mod for Forge, run:
+To build the mod, run:
 
 ```bash
 ./gradlew build
 ```
 
 The resulting JAR will be located in:
-- `forge/build/libs/rimine-forge-<version>.jar`
+- `build/libs/rimine-<version>.jar`
+
+## Running
+
+To run the mod in the Minecraft client:
+
+```bash
+./gradlew runClient
+```
 
 ## Development
 
-Rimine uses **Architectury Loom** for Forge. Most of the core logic resides in the `common` module.
+Rimine uses **Forge** for Minecraft mod development.
 
 - **Package**: `io.github.vkkkv.rimine`
 - **Native Interface**: `io.github.vkkkv.rimine.jni.RimeLib`

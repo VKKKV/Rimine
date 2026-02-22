@@ -4,20 +4,22 @@ Rimine is a Minecraft mod for version 1.20.1 that integrates the **RIME (Rime In
 
 ## Architecture
 
-- **`common`**: (`io.github.vkkkv.rimine.core`, `io.github.vkkkv.rimine.jni`)
-  - **`RimeLib`**: JNA interface mapping `librime` C API including Menu and Candidate structures.
+- **`io.github.vkkkv.rimine.jni`**: JNA interface mapping `librime` C API including Menu and Candidate structures.
+- **`io.github.vkkkv.rimine.core`**:
   - **`RimeInputHandler`**: 
     - **Advanced Key Mapping**: Exhaustive translation of GLFW keycodes to X11 keysyms (Symbols, F-keys, Numpad).
     - **Cursor Tracking**: Maintains screen coordinates for the active `EditBox` cursor.
     - **Memory Safety**: Strict lifecycle management using `RimeFreeContext` and JVM shutdown hooks.
-  - **`mixin`**: `EditBoxMixin` intercepts `renderWidget` to calculate and update cursor screen coordinates.
-- **`forge`**: (`io.github.vkkkv.rimine.forge`)
-  - **UI**: Renders a vertical candidate box with a dark background and highlighting using `GuiGraphics`.
+  - **`RimineConfig`**: Configuration management for RIME settings
+  - **`LibraryLoader`**: Handles loading native librime library
+- **`io.github.vkkkv.rimine.mixin`**: `EditBoxMixin` intercepts `renderWidget` to calculate and update cursor screen coordinates.
+- **`io.github.vkkkv.rimine.forge`**:
+  - **UI**: Renders a vertical candidate box with a dark background and highlighting using Forge's `GuiGraphics`.
 
 ## Tech Stack
 
 - **Java 17**: Required for Minecraft 1.20.1.
-- **Architectury Loom**: Gradle plugin for Forge development.
+- **Forge**: Native Minecraft mod development framework.
 - **JNA (Java Native Access)**: Bridges Java and the native `librime` C library.
 - **Mixins**: Used to extract internal state (cursor position) from vanilla Minecraft classes.
 
@@ -25,7 +27,7 @@ Rimine is a Minecraft mod for version 1.20.1 that integrates the **RIME (Rime In
 
 ### Build Commands
 - Build jar: `./gradlew build`
-- Run Forge client: `./gradlew :forge:runClient`
+- Run Forge client: `./gradlew runClient`
 
 ### Requirements
 - `librime` must be installed on the host system.
