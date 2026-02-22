@@ -28,6 +28,12 @@ To build the mod, run:
 The resulting JAR will be located in:
 - `build/libs/rimine-<version>.jar`
 
+g++ -fPIC -shared -O2 \
+    -I/usr/lib/jvm/default/include \
+    -I/usr/lib/jvm/default/include/linux \
+    -I/usr/include \
+    bridge.cpp -o librimine_jni.so -lrime
+
 ## Running
 
 To run the mod in the Minecraft client:
