@@ -1,7 +1,14 @@
 package io.github.vkkkv.rimine.core;
 
 import com.sun.jna.Pointer;
+import io.github.vkkkv.rimine.jni.RimeApi;
+import io.github.vkkkv.rimine.jni.RimeCandidate;
+import io.github.vkkkv.rimine.jni.RimeCandidateListIterator;
+import io.github.vkkkv.rimine.jni.RimeCommit;
+import io.github.vkkkv.rimine.jni.RimeContext;
 import io.github.vkkkv.rimine.jni.RimeLib;
+import io.github.vkkkv.rimine.jni.RimeStatus;
+import io.github.vkkkv.rimine.jni.RimeTraits;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -10,8 +17,11 @@ public class RimeInputHandler {
   private static long sessionId = 0;
   private static boolean initialized = false;
 
+  // Get the RIME API structure with all function pointers
+  private static final RimeApi api = RimeLib.INSTANCE.rime_get_api();
+
   // Strong reference to prevent GC of the JNA Structure while native side is active.
-  private static final RimeLib.RimeContext context = new RimeLib.RimeContext();
+  private static final RimeContext context = new RimeContext();
 
   private static int cursorX = 0;
   private static int cursorY = 0;
@@ -33,13 +43,13 @@ public class RimeInputHandler {
     Path configPath = userDataDir.getParent().resolve("rimine.json");
     RimineConfig.load(configPath);
 
-    RimeLib.RimeTraits traits = new RimeLib.RimeTraits();
+    RimeTraits traits = new RimeTraits();
     traits.shared_data_dir = sharedDataDir.toAbsolutePath().toString();
     traits.user_data_dir = userDataDir.toAbsolutePath().toString();
     traits.app_name = "rimine";
 
-    RimeLib.INSTANCE.RimeInitialize(traits);
-    sessionId = RimeLib.INSTANCE.RimeCreateSession();
+    api.initialize.invoke(traits);
+    sessionId = api.create_session.invoke();
     initialized = true;
   }
 
@@ -56,11 +66,11 @@ public class RimeInputHandler {
     int rimeKey = translateKey(glfwKeyCode);
     int rimeMods = translateModifiers(modifiers);
 
-    boolean handled = RimeLib.INSTANCE.RimeProcessKey(sessionId, rimeKey, rimeMods);
+    boolean handled = api.process_key.invoke(sessionId, rimeKey, rimeMods);
 
     if (handled) {
-      RimeLib.INSTANCE.RimeFreeContext(context);
-      RimeLib.INSTANCE.RimeGetContext(sessionId, context);
+      api.free_context.invoke(context);
+      api.get_context.invoke(sessionId, context);
     }
 
     return handled;
@@ -165,10 +175,10 @@ public class RimeInputHandler {
 
     List<String> candidates = new ArrayList<>();
     if (hasCandidates && context.menu.candidates != null) {
-      int structSize = new RimeLib.RimeCandidate(context.menu.candidates).size();
+      int structSize = new RimeCandidate(context.menu.candidates).size();
       for (int i = 0; i < context.menu.num_candidates; i++) {
         Pointer p = context.menu.candidates.share((long) i * structSize);
-        candidates.add(new RimeLib.RimeCandidate(p).text);
+        candidates.add(new RimeCandidate(p).text);
       }
     }
 
@@ -193,11 +203,11 @@ public class RimeInputHandler {
   public static synchronized void cleanup() {
     if (initialized) {
       if (sessionId != 0) {
-        RimeLib.INSTANCE.RimeFreeContext(context);
-        RimeLib.INSTANCE.RimeDestroySession(sessionId);
+        api.free_context.invoke(context);
+        api.destroy_session.invoke(sessionId);
         sessionId = 0;
       }
-      RimeLib.INSTANCE.RimeFinalize();
+      api.finalize.invoke();
       initialized = false;
     }
   }
