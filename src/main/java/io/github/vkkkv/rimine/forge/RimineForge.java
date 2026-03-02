@@ -19,6 +19,8 @@ import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 
 @Mod("rimine")
 public class RimineForge {
+  private static final String CONFIG_FILE_NAME = "rimine.json";
+
   public RimineForge() {
     FMLJavaModLoadingContext.get().getModEventBus().addListener(this::onClientSetup);
     MinecraftForge.EVENT_BUS.register(this);
@@ -41,7 +43,7 @@ public class RimineForge {
                                       .gameDirectory
                                       .toPath()
                                       .resolve("config")
-                                      .resolve("rimine.json");
+                                      .resolve(CONFIG_FILE_NAME);
                               RimeInputHandler.reload(configPath);
                               context
                                   .getSource()
@@ -82,14 +84,18 @@ public class RimineForge {
     if (data.composition() != null) {
       width = mc.font.width(data.composition());
     }
-    for (String cand : candidates) {
-      width = Math.max(width, mc.font.width(cand) + 20);
+    for (int i = 0; i < candidates.size(); i++) {
+      String candidateText = "  " + (i + 1) + ". " + candidates.get(i);
+      width = Math.max(width, mc.font.width(candidateText));
     }
-    width += 4;
+    width += 6;
 
     int height =
-        (candidates.size() + (data.composition() != null ? 1 : 0) + (data.isSwitcher() ? 1 : 0) + 1)
-                * lineHeight
+        (candidates.size()
+                + (data.composition() != null ? 1 : 0)
+                + (data.isSwitcher() ? 1 : 0)
+                + 1)
+            * lineHeight
             + 4;
 
     // Draw background using config

@@ -3,17 +3,18 @@ package io.github.vkkkv.rimine.core;
 import com.sun.jna.Pointer;
 import io.github.vkkkv.rimine.jni.RimeApi;
 import io.github.vkkkv.rimine.jni.RimeCandidate;
-import io.github.vkkkv.rimine.jni.RimeCandidateListIterator;
-import io.github.vkkkv.rimine.jni.RimeCommit;
 import io.github.vkkkv.rimine.jni.RimeContext;
 import io.github.vkkkv.rimine.jni.RimeLib;
-import io.github.vkkkv.rimine.jni.RimeStatus;
 import io.github.vkkkv.rimine.jni.RimeTraits;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
 public class RimeInputHandler {
+  private static final int GLFW_KEY_A = 65;
+  private static final int GLFW_KEY_Z = 90;
+  private static final int ASCII_LOWERCASE_OFFSET = 32;
+  private static final int CANDIDATE_STRUCT_SIZE = new RimeCandidate().size();
   private static long sessionId = 0;
   private static boolean initialized = false;
 
@@ -144,7 +145,7 @@ public class RimeInputHandler {
 
       default -> {
         // Map A-Z (65-90) to lowercase a-z (97-122)
-        if (glfwKey >= 65 && glfwKey <= 90) yield glfwKey + 32;
+        if (glfwKey >= GLFW_KEY_A && glfwKey <= GLFW_KEY_Z) yield glfwKey + ASCII_LOWERCASE_OFFSET;
         yield glfwKey;
       }
     };
@@ -175,9 +176,8 @@ public class RimeInputHandler {
 
     List<String> candidates = new ArrayList<>();
     if (hasCandidates && context.menu.candidates != null) {
-      int structSize = new RimeCandidate(context.menu.candidates).size();
       for (int i = 0; i < context.menu.num_candidates; i++) {
-        Pointer p = context.menu.candidates.share((long) i * structSize);
+        Pointer p = context.menu.candidates.share((long) i * CANDIDATE_STRUCT_SIZE);
         candidates.add(new RimeCandidate(p).text);
       }
     }
@@ -192,7 +192,7 @@ public class RimeInputHandler {
         cursorX,
         cursorY,
         context.menu.page_no,
-        context.menu.is_last_page,
+        context.menu.is_last_page != 0,
         isSwitcher);
   }
 
