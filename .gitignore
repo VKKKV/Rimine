@@ -27,3 +27,9 @@ Thumbs.db
 
 # RIME Config (Local testing)
 config/rimine/
+
+# Local test notes/scripts
+INTEGRATION_SUMMARY.md
+RIME_TEST_GUIDE.md
+TESTING_RESULTS.md
+run_rime_test.sh
