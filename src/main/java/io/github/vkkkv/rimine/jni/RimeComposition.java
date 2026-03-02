@@ -1,7 +1,6 @@
 package io.github.vkkkv.rimine.jni;
 
 import com.sun.jna.Structure;
-import java.util.Arrays;
 import java.util.List;
 
 @Structure.FieldOrder({"length", "cursor_pos", "sel_start", "sel_end", "preedit"})
@@ -14,6 +13,6 @@ public class RimeComposition extends Structure {
 
   @Override
   protected List<String> getFieldOrder() {
-    return Arrays.asList("length", "cursor_pos", "sel_start", "sel_end", "preedit");
+    return List.of("length", "cursor_pos", "sel_start", "sel_end", "preedit");
   }
 }

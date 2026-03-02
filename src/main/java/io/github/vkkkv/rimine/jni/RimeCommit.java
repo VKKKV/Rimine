@@ -1,7 +1,6 @@
 package io.github.vkkkv.rimine.jni;
 
 import com.sun.jna.Structure;
-import java.util.Arrays;
 import java.util.List;
 
 @Structure.FieldOrder({"data_size", "text"})
@@ -11,11 +10,13 @@ public class RimeCommit extends Structure {
 
   public RimeCommit() {
     super();
-    this.data_size = this.size();
+    // Mimic RIME_STRUCT_INIT: data_size = sizeof(Type) - sizeof(data_size)
+    int sz = this.size();
+    this.data_size = sz - 4; // sizeof(int) = 4
   }
 
   @Override
   protected List<String> getFieldOrder() {
-    return Arrays.asList("data_size", "text");
+    return List.of("data_size", "text");
   }
 }

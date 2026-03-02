@@ -2,7 +2,6 @@ package io.github.vkkkv.rimine.jni;
 
 import com.sun.jna.Pointer;
 import com.sun.jna.Structure;
-import java.util.Arrays;
 import java.util.List;
 
 @Structure.FieldOrder({"list", "map", "index", "key", "path"})
@@ -15,6 +14,6 @@ public class RimeConfigIterator extends Structure {
 
   @Override
   protected List<String> getFieldOrder() {
-    return Arrays.asList("list", "map", "index", "key", "path");
+    return List.of("list", "map", "index", "key", "path");
   }
 }

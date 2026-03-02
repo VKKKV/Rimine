@@ -1,7 +1,6 @@
 package io.github.vkkkv.rimine.jni;
 
 import com.sun.jna.Structure;
-import java.util.Arrays;
 import java.util.List;
 
 @Structure.FieldOrder({
@@ -20,22 +19,24 @@ public class RimeStatus extends Structure {
   public int data_size;
   public String schema_id;
   public String schema_name;
-  public boolean is_disabled;
-  public boolean is_composing;
-  public boolean is_ascii_mode;
-  public boolean is_full_shape;
-  public boolean is_simplified;
-  public boolean is_traditional;
-  public boolean is_ascii_punct;
+  public int is_disabled;
+  public int is_composing;
+  public int is_ascii_mode;
+  public int is_full_shape;
+  public int is_simplified;
+  public int is_traditional;
+  public int is_ascii_punct;
 
   public RimeStatus() {
     super();
-    this.data_size = this.size();
+    // Mimic RIME_STRUCT_INIT: data_size = sizeof(Type) - sizeof(data_size)
+    int sz = this.size();
+    this.data_size = sz - 4; // sizeof(int) = 4
   }
 
   @Override
   protected List<String> getFieldOrder() {
-    return Arrays.asList(
+    return List.of(
         "data_size",
         "schema_id",
         "schema_name",

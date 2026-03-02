@@ -2,7 +2,6 @@ package io.github.vkkkv.rimine.jni;
 
 import com.sun.jna.Pointer;
 import com.sun.jna.Structure;
-import java.util.Arrays;
 import java.util.List;
 
 @Structure.FieldOrder({"data_size", "module_name", "initialize", "finalize", "get_api"})
@@ -15,6 +14,6 @@ public class RimeModule extends Structure {
 
   @Override
   protected List<String> getFieldOrder() {
-    return Arrays.asList("data_size", "module_name", "initialize", "finalize", "get_api");
+    return List.of("data_size", "module_name", "initialize", "finalize", "get_api");
   }
 }
