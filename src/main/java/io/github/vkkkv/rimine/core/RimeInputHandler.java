@@ -3,6 +3,7 @@ package io.github.vkkkv.rimine.core;
 import com.sun.jna.Pointer;
 import io.github.vkkkv.rimine.jni.RimeApi;
 import io.github.vkkkv.rimine.jni.RimeCandidate;
+import io.github.vkkkv.rimine.jni.RimeCommit;
 import io.github.vkkkv.rimine.jni.RimeContext;
 import io.github.vkkkv.rimine.jni.RimeLib;
 import io.github.vkkkv.rimine.jni.RimeStatus;
@@ -32,6 +33,7 @@ public class RimeInputHandler {
   private static int cursorX = 0;
   private static int cursorY = 0;
   private static Snapshot snapshot = null;
+  private static String pendingCommitText = "";
 
   public record RimeData(
       String composition,
@@ -90,6 +92,7 @@ public class RimeInputHandler {
         traits.shared_data_dir,
         traits.user_data_dir,
         sessionId);
+    ensureSchemaReady(traitsRef);
     logSchemaInfo();
     initialized = true;
   }
@@ -103,16 +106,16 @@ public class RimeInputHandler {
    */
   public static boolean handleKeyPress(int glfwKeyCode, int modifiers) {
     if (!initialized || sessionId == 0) return false;
-    // Printable characters are handled by charTyped; handling them here duplicates input.
-    if (isPrintableAscii(glfwKeyCode)) return false;
 
     int rimeKey = translateKey(glfwKeyCode);
     int rimeMods = translateModifiers(modifiers);
 
     boolean handled;
     try {
+      api.set_option.invoke(sessionId, "ascii_mode", false);
       handled = api.process_key.invoke(sessionId, rimeKey, rimeMods);
       refreshSnapshot();
+      collectCommitText();
       traceInput("key", glfwKeyCode, modifiers, handled);
     } catch (RuntimeException e) {
       LOGGER.error("[Rimine] Failed while processing key input.", e);
@@ -127,8 +130,10 @@ public class RimeInputHandler {
 
     boolean handled;
     try {
+      api.set_option.invoke(sessionId, "ascii_mode", false);
       handled = api.process_key.invoke(sessionId, codePoint, translateModifiers(modifiers));
       refreshSnapshot();
+      collectCommitText();
       traceInput("char", codePoint, modifiers, handled);
     } catch (RuntimeException e) {
       LOGGER.error("[Rimine] Failed while processing typed character.", e);
@@ -220,10 +225,6 @@ public class RimeInputHandler {
     return rimeMods;
   }
 
-  private static boolean isPrintableAscii(int glfwKeyCode) {
-    return glfwKeyCode >= 32 && glfwKeyCode <= 126;
-  }
-
   public static void setCursorPosition(int x, int y) {
     cursorX = x;
     cursorY = y;
@@ -255,7 +256,20 @@ public class RimeInputHandler {
       api.finalize.invoke();
       initialized = false;
       snapshot = null;
+      pendingCommitText = "";
     }
+  }
+
+  public static String consumeCommitText() {
+    String commit = pendingCommitText;
+    pendingCommitText = "";
+    return commit;
+  }
+
+  public static boolean shouldBlockCharTyped(int codePoint) {
+    if (!initialized || sessionId == 0) return false;
+    // Prevent raw chat insertion while keyPressed is driving RIME input.
+    return codePoint >= 32 && codePoint <= 126;
   }
 
   private static void logSchemaInfo() {
@@ -282,9 +296,58 @@ public class RimeInputHandler {
       }
       api.set_option.invoke(sessionId, "ascii_mode", false);
       LOGGER.info("[Rimine] Forced option ascii_mode=false");
+      // Prevent JNA from writing Java String fields back into native-owned memory on free.
+      status.setAutoWrite(false);
       api.free_status.invoke(status);
     } else {
       LOGGER.warn("[Rimine] Could not query active schema after initialization.");
+    }
+  }
+
+  private static void ensureSchemaReady(RimeTraits.ByReference traitsRef) {
+    boolean initiallySelected = trySelectPreferredSchema();
+    if (!initiallySelected) {
+      LOGGER.warn("[Rimine] Could not activate preferred schema before deploy.");
+    }
+
+    // Always run one deploy/prebuild pass for the chosen user_data_dir to ensure
+    // dictionaries and schema artifacts are usable at runtime.
+    try {
+      api.deployer_initialize.invoke(traitsRef);
+      boolean prebuildOk = api.prebuild.invoke();
+      boolean deployOk = api.deploy.invoke();
+      LOGGER.info("[Rimine] prebuild={} deploy={}", prebuildOk, deployOk);
+    } catch (RuntimeException e) {
+      LOGGER.warn("[Rimine] Deploy/prebuild failed.", e);
+    }
+
+    if (!trySelectPreferredSchema()) {
+      LOGGER.warn("[Rimine] Preferred schemas still unavailable after deploy attempt.");
+    }
+  }
+
+  private static boolean trySelectPreferredSchema() {
+    String[] preferredSchemas = {"luna_pinyin_simp", "luna_pinyin", "terra_pinyin"};
+    for (String schemaId : preferredSchemas) {
+      boolean selected = api.select_schema.invoke(sessionId, schemaId);
+      if (!selected) continue;
+      String active = getActiveSchemaId();
+      if (schemaId.equals(active)) {
+        LOGGER.info("[Rimine] Activated schema: {}", schemaId);
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private static String getActiveSchemaId() {
+    RimeStatus status = new RimeStatus();
+    try {
+      if (!api.get_status.invoke(sessionId, status)) return null;
+      return status.schema_id;
+    } finally {
+      status.setAutoWrite(false);
+      api.free_status.invoke(status);
     }
   }
 
@@ -365,6 +428,8 @@ public class RimeInputHandler {
     }
 
     try {
+      // Prevent JNA from writing Java String fields back into native-owned memory on free.
+      context.setAutoWrite(false);
       boolean hasComposition =
           context.composition != null
               && context.composition.preedit != null
@@ -393,6 +458,22 @@ public class RimeInputHandler {
               hasCandidates && !hasComposition);
     } finally {
       api.free_context.invoke(context);
+    }
+  }
+
+  private static void collectCommitText() {
+    RimeCommit commit = new RimeCommit();
+    if (!api.get_commit.invoke(sessionId, commit)) {
+      return;
+    }
+    try {
+      if (commit.text != null && !commit.text.isEmpty()) {
+        pendingCommitText = pendingCommitText + commit.text;
+      }
+    } finally {
+      // Prevent JNA from writing Java String fields back into native-owned memory on free.
+      commit.setAutoWrite(false);
+      api.free_commit.invoke(commit);
     }
   }
 }

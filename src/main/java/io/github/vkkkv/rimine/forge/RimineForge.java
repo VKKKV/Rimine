@@ -6,6 +6,9 @@ import io.github.vkkkv.rimine.core.RimineConfig;
 import java.nio.file.Path;
 import java.util.List;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.components.events.GuiEventListener;
+import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.client.gui.screens.ChatScreen;
 import net.minecraft.network.chat.Component;
@@ -64,6 +67,7 @@ public class RimineForge {
   public void onKeyPressed(ScreenEvent.KeyPressed.Pre event) {
     if (!(event.getScreen() instanceof ChatScreen)) return;
     if (RimeInputHandler.handleKeyPress(event.getKeyCode(), event.getModifiers())) {
+      applyCommitToChat((ChatScreen) event.getScreen());
       event.setCanceled(true);
     }
   }
@@ -71,7 +75,7 @@ public class RimineForge {
   @SubscribeEvent
   public void onCharacterTyped(ScreenEvent.CharacterTyped.Pre event) {
     if (!(event.getScreen() instanceof ChatScreen)) return;
-    if (RimeInputHandler.handleCharTyped(event.getCodePoint(), event.getModifiers())) {
+    if (RimeInputHandler.shouldBlockCharTyped(event.getCodePoint())) {
       event.setCanceled(true);
     }
   }
@@ -138,5 +142,16 @@ public class RimineForge {
     // Page indicator
     String pageInfo = "[" + (data.pageNo() + 1) + (data.isLastPage() ? "]" : "+]");
     event.getGuiGraphics().drawString(mc.font, pageInfo, x, currentY, 0x777777, false);
+  }
+
+  private void applyCommitToChat(ChatScreen chatScreen) {
+    String commitText = RimeInputHandler.consumeCommitText();
+    if (commitText == null || commitText.isEmpty()) return;
+
+    Screen screen = chatScreen;
+    GuiEventListener focused = screen.getFocused();
+    if (focused instanceof EditBox input) {
+      input.insertText(commitText);
+    }
   }
 }
