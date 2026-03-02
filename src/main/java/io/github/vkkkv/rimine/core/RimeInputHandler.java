@@ -24,6 +24,10 @@ public class RimeInputHandler {
   private static final int CANDIDATE_STRUCT_SIZE = new RimeCandidate().size();
   private static final int INPUT_TRACE_LIMIT = 40;
   private static final String[] SCHEMA_CYCLE = {"luna_pinyin_simp", "luna_pinyin", "terra_pinyin"};
+  private static final int GLFW_KEY_DOWN = 264;
+  private static final int GLFW_KEY_UP = 265;
+  private static final int GLFW_KEY_LEFT = 263;
+  private static final int GLFW_KEY_RIGHT = 262;
   private static int inputTraceCount = 0;
   private static long sessionId = 0;
   private static boolean initialized = false;
@@ -110,6 +114,11 @@ public class RimeInputHandler {
     if (!initialized || sessionId == 0) return false;
     if (asciiMode) return false;
 
+    if (handleCandidateNavigation(glfwKeyCode)) {
+      traceInput("key", glfwKeyCode, modifiers, true);
+      return true;
+    }
+
     int rimeKey = translateKey(glfwKeyCode);
     int rimeMods = translateModifiers(modifiers);
 
@@ -126,6 +135,30 @@ public class RimeInputHandler {
     }
 
     return handled;
+  }
+
+  private static boolean handleCandidateNavigation(int glfwKeyCode) {
+    if (snapshot == null || snapshot.candidates().isEmpty()) return false;
+    if (glfwKeyCode == GLFW_KEY_LEFT || glfwKeyCode == GLFW_KEY_RIGHT) {
+      boolean backward = glfwKeyCode == GLFW_KEY_LEFT;
+      boolean ok = api.change_page.invoke(sessionId, backward);
+      if (!ok) return false;
+      refreshSnapshot();
+      return true;
+    }
+    if (glfwKeyCode != GLFW_KEY_DOWN && glfwKeyCode != GLFW_KEY_UP) return false;
+
+    int count = snapshot.candidates().size();
+    int current = Math.max(0, Math.min(snapshot.highlightedIndex(), count - 1));
+    int next =
+        glfwKeyCode == GLFW_KEY_DOWN
+            ? (current + 1) % count
+            : (current - 1 + count) % count;
+
+    boolean ok = api.highlight_candidate_on_current_page.invoke(sessionId, next);
+    if (!ok) return false;
+    refreshSnapshot();
+    return true;
   }
 
   public static boolean handleCharTyped(int codePoint, int modifiers) {

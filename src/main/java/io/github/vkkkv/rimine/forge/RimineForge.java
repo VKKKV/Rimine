@@ -1,5 +1,6 @@
 package io.github.vkkkv.rimine.forge;
 
+import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import io.github.vkkkv.rimine.core.RimeInputHandler;
 import io.github.vkkkv.rimine.core.RimineConfig;
@@ -12,6 +13,7 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.client.gui.screens.ChatScreen;
 import net.minecraft.network.chat.Component;
+import static net.minecraft.commands.Commands.argument;
 import net.minecraftforge.client.event.RegisterClientCommandsEvent;
 import net.minecraftforge.client.event.RenderGuiOverlayEvent;
 import net.minecraftforge.client.event.ScreenEvent;
@@ -24,6 +26,11 @@ import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 @Mod("rimine")
 public class RimineForge {
   private static final String CONFIG_FILE_NAME = "rimine.json";
+  private static final int MOD_SHIFT = 0x0001;
+  private static final int MOD_CTRL = 0x0002;
+  private static final int KEY_SPACE = 32;
+  private static final int KEY_GRAVE = 96;
+  private boolean suppressNextCharTyped = false;
 
   public RimineForge() {
     FMLJavaModLoadingContext.get().getModEventBus().addListener(this::onClientSetup);
@@ -54,7 +61,112 @@ public class RimineForge {
                                   .sendSystemMessage(
                                       Component.literal("Rimine configuration reloaded."));
                               return 1;
-                            })));
+                            }))
+                .then(
+                    LiteralArgumentBuilder.<CommandSourceStack>literal("mode")
+                        .executes(
+                            context -> {
+                              context
+                                  .getSource()
+                                  .sendSystemMessage(
+                                      Component.literal(
+                                          "Rime mode: "
+                                              + (RimeInputHandler.isAsciiMode()
+                                                  ? "English (ASCII)"
+                                                  : "Chinese")));
+                              return 1;
+                            })
+                        .then(
+                            LiteralArgumentBuilder.<CommandSourceStack>literal("toggle")
+                                .executes(
+                                    context -> {
+                                      if (RimeInputHandler.toggleAsciiMode()) {
+                                        context
+                                            .getSource()
+                                            .sendSystemMessage(
+                                                Component.literal(
+                                                    "Rime mode: "
+                                                        + (RimeInputHandler.isAsciiMode()
+                                                            ? "English (ASCII)"
+                                                            : "Chinese")));
+                                        return 1;
+                                      }
+                                      context
+                                          .getSource()
+                                          .sendSystemMessage(
+                                              Component.literal("Failed to toggle Rime mode."));
+                                      return 0;
+                                    }))
+                        .then(
+                            LiteralArgumentBuilder.<CommandSourceStack>literal("zh")
+                                .executes(
+                                    context -> {
+                                      boolean ok = RimeInputHandler.setAsciiMode(false);
+                                      context
+                                          .getSource()
+                                          .sendSystemMessage(
+                                              Component.literal(
+                                                  ok
+                                                      ? "Rime mode: Chinese"
+                                                      : "Failed to set Chinese mode."));
+                                      return ok ? 1 : 0;
+                                    }))
+                        .then(
+                            LiteralArgumentBuilder.<CommandSourceStack>literal("en")
+                                .executes(
+                                    context -> {
+                                      boolean ok = RimeInputHandler.setAsciiMode(true);
+                                      context
+                                          .getSource()
+                                          .sendSystemMessage(
+                                              Component.literal(
+                                                  ok
+                                                      ? "Rime mode: English (ASCII)"
+                                                      : "Failed to set English mode."));
+                                      return ok ? 1 : 0;
+                                    })))
+                .then(
+                    LiteralArgumentBuilder.<CommandSourceStack>literal("schema")
+                        .executes(
+                            context -> {
+                              String schema = RimeInputHandler.getCurrentSchemaId();
+                              context
+                                  .getSource()
+                                  .sendSystemMessage(
+                                      Component.literal(
+                                          "Current schema: " + (schema == null ? "N/A" : schema)));
+                              return 1;
+                            })
+                        .then(
+                            LiteralArgumentBuilder.<CommandSourceStack>literal("next")
+                                .executes(
+                                    context -> {
+                                      String schema = RimeInputHandler.cycleSchema();
+                                      context
+                                          .getSource()
+                                          .sendSystemMessage(
+                                              Component.literal(
+                                                  schema != null
+                                                      ? "Switched schema: " + schema
+                                                      : "Failed to switch schema."));
+                                      return schema != null ? 1 : 0;
+                                    }))
+                        .then(
+                            argument("id", StringArgumentType.word())
+                                .executes(
+                                    context -> {
+                                      String schemaId =
+                                          StringArgumentType.getString(context, "id");
+                                      boolean ok = RimeInputHandler.setSchema(schemaId);
+                                      context
+                                          .getSource()
+                                          .sendSystemMessage(
+                                              Component.literal(
+                                                  ok
+                                                      ? "Switched schema: " + schemaId
+                                                      : "Failed to switch schema: " + schemaId));
+                                      return ok ? 1 : 0;
+                                    }))));
   }
 
   private void onClientSetup(FMLClientSetupEvent event) {
@@ -66,8 +178,28 @@ public class RimineForge {
   @SubscribeEvent
   public void onKeyPressed(ScreenEvent.KeyPressed.Pre event) {
     if (!(event.getScreen() instanceof ChatScreen)) return;
+    suppressNextCharTyped = false;
+    if ((event.getModifiers() & (MOD_CTRL | MOD_SHIFT)) == (MOD_CTRL | MOD_SHIFT)) {
+      if (event.getKeyCode() == KEY_SPACE) {
+        if (RimeInputHandler.toggleAsciiMode()) {
+          showOverlayMessage(
+              "Rime mode: " + (RimeInputHandler.isAsciiMode() ? "English" : "Chinese"));
+        }
+        suppressNextCharTyped = true;
+        event.setCanceled(true);
+        return;
+      }
+      if (event.getKeyCode() == KEY_GRAVE) {
+        String schema = RimeInputHandler.cycleSchema();
+        showOverlayMessage(schema != null ? "Schema: " + schema : "Schema switch failed");
+        suppressNextCharTyped = true;
+        event.setCanceled(true);
+        return;
+      }
+    }
     if (RimeInputHandler.handleKeyPress(event.getKeyCode(), event.getModifiers())) {
       applyCommitToChat((ChatScreen) event.getScreen());
+      suppressNextCharTyped = true;
       event.setCanceled(true);
     }
   }
@@ -75,6 +207,11 @@ public class RimineForge {
   @SubscribeEvent
   public void onCharacterTyped(ScreenEvent.CharacterTyped.Pre event) {
     if (!(event.getScreen() instanceof ChatScreen)) return;
+    if (suppressNextCharTyped) {
+      suppressNextCharTyped = false;
+      event.setCanceled(true);
+      return;
+    }
     if (RimeInputHandler.shouldBlockCharTyped(event.getCodePoint())) {
       event.setCanceled(true);
     }
@@ -152,6 +289,12 @@ public class RimineForge {
     GuiEventListener focused = screen.getFocused();
     if (focused instanceof EditBox input) {
       input.insertText(commitText);
+    }
+  }
+
+  private void showOverlayMessage(String message) {
+    if (Minecraft.getInstance().player != null) {
+      Minecraft.getInstance().player.displayClientMessage(Component.literal(message), true);
     }
   }
 }
