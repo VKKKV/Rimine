@@ -23,9 +23,11 @@ public class RimeInputHandler {
   private static final int ASCII_LOWERCASE_OFFSET = 32;
   private static final int CANDIDATE_STRUCT_SIZE = new RimeCandidate().size();
   private static final int INPUT_TRACE_LIMIT = 40;
+  private static final String[] SCHEMA_CYCLE = {"luna_pinyin_simp", "luna_pinyin", "terra_pinyin"};
   private static int inputTraceCount = 0;
   private static long sessionId = 0;
   private static boolean initialized = false;
+  private static boolean asciiMode = true;
 
   // Get the RIME API structure with all function pointers
   private static final RimeApi api = RimeLib.INSTANCE.rime_get_api();
@@ -106,13 +108,14 @@ public class RimeInputHandler {
    */
   public static boolean handleKeyPress(int glfwKeyCode, int modifiers) {
     if (!initialized || sessionId == 0) return false;
+    if (asciiMode) return false;
 
     int rimeKey = translateKey(glfwKeyCode);
     int rimeMods = translateModifiers(modifiers);
 
     boolean handled;
     try {
-      api.set_option.invoke(sessionId, "ascii_mode", false);
+      api.set_option.invoke(sessionId, "ascii_mode", asciiMode);
       handled = api.process_key.invoke(sessionId, rimeKey, rimeMods);
       refreshSnapshot();
       collectCommitText();
@@ -130,7 +133,7 @@ public class RimeInputHandler {
 
     boolean handled;
     try {
-      api.set_option.invoke(sessionId, "ascii_mode", false);
+      api.set_option.invoke(sessionId, "ascii_mode", asciiMode);
       handled = api.process_key.invoke(sessionId, codePoint, translateModifiers(modifiers));
       refreshSnapshot();
       collectCommitText();
@@ -267,9 +270,60 @@ public class RimeInputHandler {
   }
 
   public static boolean shouldBlockCharTyped(int codePoint) {
-    if (!initialized || sessionId == 0) return false;
-    // Prevent raw chat insertion while keyPressed is driving RIME input.
+    if (!initialized || sessionId == 0 || asciiMode) return false;
     return codePoint >= 32 && codePoint <= 126;
+  }
+
+  public static synchronized boolean setAsciiMode(boolean enabled) {
+    if (!initialized || sessionId == 0) return false;
+    try {
+      api.set_option.invoke(sessionId, "ascii_mode", enabled);
+      asciiMode = enabled;
+      return true;
+    } catch (RuntimeException e) {
+      LOGGER.warn("[Rimine] Failed to set ascii_mode={}", enabled, e);
+      return false;
+    }
+  }
+
+  public static synchronized boolean toggleAsciiMode() {
+    return setAsciiMode(!asciiMode);
+  }
+
+  public static synchronized boolean isAsciiMode() {
+    return asciiMode;
+  }
+
+  public static synchronized boolean setSchema(String schemaId) {
+    if (!initialized || sessionId == 0 || schemaId == null || schemaId.isBlank()) return false;
+    boolean selected = api.select_schema.invoke(sessionId, schemaId);
+    if (selected) {
+      LOGGER.info("[Rimine] Activated schema: {}", schemaId);
+      return true;
+    }
+    return false;
+  }
+
+  public static synchronized String cycleSchema() {
+    if (!initialized || sessionId == 0) return null;
+    String current = getActiveSchemaId();
+    int startIdx = 0;
+    for (int i = 0; i < SCHEMA_CYCLE.length; i++) {
+      if (SCHEMA_CYCLE[i].equals(current)) {
+        startIdx = i + 1;
+        break;
+      }
+    }
+    for (int i = 0; i < SCHEMA_CYCLE.length; i++) {
+      String candidate = SCHEMA_CYCLE[(startIdx + i) % SCHEMA_CYCLE.length];
+      if (setSchema(candidate)) return candidate;
+    }
+    return null;
+  }
+
+  public static synchronized String getCurrentSchemaId() {
+    if (!initialized || sessionId == 0) return null;
+    return getActiveSchemaId();
   }
 
   private static void logSchemaInfo() {
@@ -294,8 +348,8 @@ public class RimeInputHandler {
                   + "Install/deploy RIME schemas in shared/user data.");
         }
       }
-      api.set_option.invoke(sessionId, "ascii_mode", false);
-      LOGGER.info("[Rimine] Forced option ascii_mode=false");
+      api.set_option.invoke(sessionId, "ascii_mode", asciiMode);
+      LOGGER.info("[Rimine] Set option ascii_mode={}", asciiMode);
       // Prevent JNA from writing Java String fields back into native-owned memory on free.
       status.setAutoWrite(false);
       api.free_status.invoke(status);

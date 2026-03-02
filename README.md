@@ -36,6 +36,26 @@ To run the mod in the Minecraft client:
 ./gradlew runClient
 ```
 
+## Input Mode and Keymap
+
+- **Default mode on startup**: English (ASCII).
+- **Toggle Chinese/English in chat**: `Ctrl+Shift+Space`
+- **Cycle input schema in chat**: `Ctrl+Shift+\``
+- **Candidate navigation (Chinese mode)**:
+  - Arrow keys: move highlight
+  - Number keys `1..9`: select candidate
+  - `Space`/`Enter`: commit current selection
+
+### Chat Commands
+
+- ` /rimine mode` - show current mode
+- ` /rimine mode toggle` - toggle Chinese/English
+- ` /rimine mode zh` - switch to Chinese mode
+- ` /rimine mode en` - switch to English mode
+- ` /rimine schema` - show current schema
+- ` /rimine schema next` - cycle schema
+- ` /rimine schema <id>` - switch schema directly (for example `luna_pinyin_simp`)
+
 ## Development
 
 Rimine uses **Forge** for Minecraft mod development.
