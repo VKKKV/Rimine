@@ -39,4 +39,5 @@ public abstract class EditBoxMixin extends AbstractWidget {
       RimeInputHandler.setCursorPosition(x + cursorOffset, y + 10);
     }
   }
+
 }

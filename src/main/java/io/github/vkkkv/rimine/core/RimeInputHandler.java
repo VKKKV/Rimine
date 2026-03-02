@@ -5,27 +5,33 @@ import io.github.vkkkv.rimine.jni.RimeApi;
 import io.github.vkkkv.rimine.jni.RimeCandidate;
 import io.github.vkkkv.rimine.jni.RimeContext;
 import io.github.vkkkv.rimine.jni.RimeLib;
+import io.github.vkkkv.rimine.jni.RimeStatus;
 import io.github.vkkkv.rimine.jni.RimeTraits;
+import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import org.slf4j.Logger;
+import com.mojang.logging.LogUtils;
 
 public class RimeInputHandler {
+  private static final Logger LOGGER = LogUtils.getLogger();
   private static final int GLFW_KEY_A = 65;
   private static final int GLFW_KEY_Z = 90;
   private static final int ASCII_LOWERCASE_OFFSET = 32;
   private static final int CANDIDATE_STRUCT_SIZE = new RimeCandidate().size();
+  private static final int INPUT_TRACE_LIMIT = 40;
+  private static int inputTraceCount = 0;
   private static long sessionId = 0;
   private static boolean initialized = false;
 
   // Get the RIME API structure with all function pointers
   private static final RimeApi api = RimeLib.INSTANCE.rime_get_api();
 
-  // Strong reference to prevent GC of the JNA Structure while native side is active.
-  private static final RimeContext context = new RimeContext();
-
   private static int cursorX = 0;
   private static int cursorY = 0;
+  private static Snapshot snapshot = null;
 
   public record RimeData(
       String composition,
@@ -37,6 +43,14 @@ public class RimeInputHandler {
       boolean isLastPage,
       boolean isSwitcher) {}
 
+  private record Snapshot(
+      String composition,
+      List<String> candidates,
+      int highlightedIndex,
+      int pageNo,
+      boolean isLastPage,
+      boolean isSwitcher) {}
+
   public static synchronized void init(Path sharedDataDir, Path userDataDir) {
     if (initialized) return;
 
@@ -44,13 +58,39 @@ public class RimeInputHandler {
     Path configPath = userDataDir.getParent().resolve("rimine.json");
     RimineConfig.load(configPath);
 
+    Path resolvedSharedDataDir = resolveSharedDataDir(sharedDataDir);
+    Path resolvedUserDataDir = resolveUserDataDir(userDataDir);
+
+    try {
+      Files.createDirectories(resolvedSharedDataDir);
+      Files.createDirectories(resolvedUserDataDir);
+    } catch (IOException e) {
+      LOGGER.error("[Rimine] Failed to create RIME data directories.", e);
+    }
+
     RimeTraits traits = new RimeTraits();
-    traits.shared_data_dir = sharedDataDir.toAbsolutePath().toString();
-    traits.user_data_dir = userDataDir.toAbsolutePath().toString();
+    traits.shared_data_dir = resolvedSharedDataDir.toAbsolutePath().toString();
+    traits.user_data_dir = resolvedUserDataDir.toAbsolutePath().toString();
     traits.app_name = "rimine";
 
-    api.initialize.invoke(traits);
+    RimeTraits.ByReference traitsRef = new RimeTraits.ByReference();
+    traitsRef.shared_data_dir = traits.shared_data_dir;
+    traitsRef.user_data_dir = traits.user_data_dir;
+    traitsRef.app_name = traits.app_name;
+    traitsRef.data_size = traits.data_size;
+
+    api.setup.invoke(traitsRef);
+    api.initialize.invoke(traitsRef);
     sessionId = api.create_session.invoke();
+    if (sessionId == 0) {
+      throw new IllegalStateException("Failed to create RIME session");
+    }
+    LOGGER.info(
+        "[Rimine] Initialized with shared_data_dir={} user_data_dir={} sessionId={}",
+        traits.shared_data_dir,
+        traits.user_data_dir,
+        sessionId);
+    logSchemaInfo();
     initialized = true;
   }
 
@@ -63,15 +103,36 @@ public class RimeInputHandler {
    */
   public static boolean handleKeyPress(int glfwKeyCode, int modifiers) {
     if (!initialized || sessionId == 0) return false;
+    // Printable characters are handled by charTyped; handling them here duplicates input.
+    if (isPrintableAscii(glfwKeyCode)) return false;
 
     int rimeKey = translateKey(glfwKeyCode);
     int rimeMods = translateModifiers(modifiers);
 
-    boolean handled = api.process_key.invoke(sessionId, rimeKey, rimeMods);
+    boolean handled;
+    try {
+      handled = api.process_key.invoke(sessionId, rimeKey, rimeMods);
+      refreshSnapshot();
+      traceInput("key", glfwKeyCode, modifiers, handled);
+    } catch (RuntimeException e) {
+      LOGGER.error("[Rimine] Failed while processing key input.", e);
+      return false;
+    }
 
-    if (handled) {
-      api.free_context.invoke(context);
-      api.get_context.invoke(sessionId, context);
+    return handled;
+  }
+
+  public static boolean handleCharTyped(int codePoint, int modifiers) {
+    if (!initialized || sessionId == 0 || codePoint <= 0) return false;
+
+    boolean handled;
+    try {
+      handled = api.process_key.invoke(sessionId, codePoint, translateModifiers(modifiers));
+      refreshSnapshot();
+      traceInput("char", codePoint, modifiers, handled);
+    } catch (RuntimeException e) {
+      LOGGER.error("[Rimine] Failed while processing typed character.", e);
+      return false;
     }
 
     return handled;
@@ -159,41 +220,26 @@ public class RimeInputHandler {
     return rimeMods;
   }
 
+  private static boolean isPrintableAscii(int glfwKeyCode) {
+    return glfwKeyCode >= 32 && glfwKeyCode <= 126;
+  }
+
   public static void setCursorPosition(int x, int y) {
     cursorX = x;
     cursorY = y;
   }
 
   public static RimeData getCurrentData() {
-    if (!initialized || sessionId == 0) return null;
-
-    // RIME's context is already updated in handleKeyPress
-    boolean hasComposition =
-        context.composition.preedit != null && !context.composition.preedit.isEmpty();
-    boolean hasCandidates = context.menu.num_candidates > 0;
-
-    if (!hasComposition && !hasCandidates) return null;
-
-    List<String> candidates = new ArrayList<>();
-    if (hasCandidates && context.menu.candidates != null) {
-      for (int i = 0; i < context.menu.num_candidates; i++) {
-        Pointer p = context.menu.candidates.share((long) i * CANDIDATE_STRUCT_SIZE);
-        candidates.add(new RimeCandidate(p).text);
-      }
-    }
-
-    // Switcher state: candidates exist but no composition/preedit text
-    boolean isSwitcher = hasCandidates && !hasComposition;
-
+    if (!initialized || sessionId == 0 || snapshot == null) return null;
     return new RimeData(
-        context.composition.preedit,
-        candidates,
-        context.menu.highlighted_candidate_index,
+        snapshot.composition(),
+        snapshot.candidates(),
+        snapshot.highlightedIndex(),
         cursorX,
         cursorY,
-        context.menu.page_no,
-        context.menu.is_last_page != 0,
-        isSwitcher);
+        snapshot.pageNo(),
+        snapshot.isLastPage(),
+        snapshot.isSwitcher());
   }
 
   public static void reload(Path configPath) {
@@ -203,12 +249,150 @@ public class RimeInputHandler {
   public static synchronized void cleanup() {
     if (initialized) {
       if (sessionId != 0) {
-        api.free_context.invoke(context);
         api.destroy_session.invoke(sessionId);
         sessionId = 0;
       }
       api.finalize.invoke();
       initialized = false;
+      snapshot = null;
+    }
+  }
+
+  private static void logSchemaInfo() {
+    RimeStatus status = new RimeStatus();
+    if (api.get_status.invoke(sessionId, status)) {
+      String schemaId = status.schema_id != null ? status.schema_id : "N/A";
+      String schemaName = status.schema_name != null ? status.schema_name : "N/A";
+      System.out.println("[Rimine] Active schema: " + schemaId + " (" + schemaName + ")");
+      LOGGER.info(
+          "[Rimine] Active schema: {} ({}) ascii_mode={} composing={}",
+          schemaId,
+          schemaName,
+          status.is_ascii_mode,
+          status.is_composing);
+      if (".default".equals(schemaId)) {
+        boolean switched = api.select_schema.invoke(sessionId, "luna_pinyin");
+        if (switched) {
+          LOGGER.info("[Rimine] Auto-selected schema: luna_pinyin");
+        } else {
+          LOGGER.warn(
+              "[Rimine] Active schema is .default and auto-select of luna_pinyin failed. "
+                  + "Install/deploy RIME schemas in shared/user data.");
+        }
+      }
+      api.set_option.invoke(sessionId, "ascii_mode", false);
+      LOGGER.info("[Rimine] Forced option ascii_mode=false");
+      api.free_status.invoke(status);
+    } else {
+      LOGGER.warn("[Rimine] Could not query active schema after initialization.");
+    }
+  }
+
+  private static Path resolveSharedDataDir(Path configuredSharedDataDir) {
+    if (hasCompiledSchemaData(configuredSharedDataDir)) {
+      return configuredSharedDataDir;
+    }
+
+    Path systemSharedDataDir = Path.of("/usr/share/rime-data");
+    if (hasCompiledSchemaData(systemSharedDataDir)) {
+      LOGGER.info(
+          "[Rimine] Using system shared data directory: {}",
+          systemSharedDataDir.toAbsolutePath());
+      return systemSharedDataDir;
+    }
+
+    LOGGER.warn(
+        "[Rimine] Shared data directory has no compiled schema data (missing build/*.bin): "
+            + configuredSharedDataDir.toAbsolutePath());
+    return configuredSharedDataDir;
+  }
+
+  private static boolean isDirectoryUsable(Path dir) {
+    if (!Files.isDirectory(dir)) return false;
+    try (var stream = Files.list(dir)) {
+      return stream.findAny().isPresent();
+    } catch (IOException e) {
+      return false;
+    }
+  }
+
+  private static boolean hasCompiledSchemaData(Path dir) {
+    Path buildDir = dir.resolve("build");
+    if (!Files.isDirectory(buildDir)) return false;
+    try (var stream = Files.list(buildDir)) {
+      return stream.anyMatch(path -> path.getFileName().toString().endsWith(".bin"));
+    } catch (IOException e) {
+      return false;
+    }
+  }
+
+  private static Path resolveUserDataDir(Path configuredUserDataDir) {
+    if (isDirectoryUsable(configuredUserDataDir)) {
+      return configuredUserDataDir;
+    }
+
+    Path systemUserDataDir =
+        Path.of(System.getProperty("user.home"), ".local", "share", "rime");
+    if (isDirectoryUsable(systemUserDataDir)) {
+      LOGGER.info("[Rimine] Using system user data directory: {}", systemUserDataDir.toAbsolutePath());
+      return systemUserDataDir;
+    }
+
+    return configuredUserDataDir;
+  }
+
+  private static void traceInput(String type, int code, int modifiers, boolean handled) {
+    if (inputTraceCount >= INPUT_TRACE_LIMIT) return;
+    inputTraceCount++;
+
+    String preedit = snapshot != null && snapshot.composition() != null ? snapshot.composition() : "";
+    int candidateCount = snapshot != null ? snapshot.candidates().size() : 0;
+    LOGGER.info(
+        "[Rimine] input {} code={} mods={} handled={} preedit='{}' candidates={}",
+        type,
+        code,
+        modifiers,
+        handled,
+        preedit,
+        candidateCount);
+  }
+
+  private static void refreshSnapshot() {
+    RimeContext context = new RimeContext();
+    if (!api.get_context.invoke(sessionId, context)) {
+      snapshot = null;
+      return;
+    }
+
+    try {
+      boolean hasComposition =
+          context.composition != null
+              && context.composition.preedit != null
+              && !context.composition.preedit.isEmpty();
+      boolean hasCandidates = context.menu != null && context.menu.num_candidates > 0;
+      if (!hasComposition && !hasCandidates) {
+        snapshot = null;
+        return;
+      }
+
+      List<String> candidates = new ArrayList<>();
+      if (hasCandidates && context.menu.candidates != null) {
+        for (int i = 0; i < context.menu.num_candidates; i++) {
+          Pointer p = context.menu.candidates.share((long) i * CANDIDATE_STRUCT_SIZE);
+          candidates.add(new RimeCandidate(p).text);
+        }
+      }
+
+      snapshot =
+          new Snapshot(
+              context.composition.preedit,
+              candidates,
+              context.menu.highlighted_candidate_index,
+              context.menu.page_no,
+              context.menu.is_last_page != 0,
+              hasCandidates && !hasComposition);
+    } finally {
+      api.free_context.invoke(context);
     }
   }
 }

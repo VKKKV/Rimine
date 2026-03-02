@@ -7,6 +7,7 @@ import java.nio.file.Path;
 import java.util.List;
 import net.minecraft.client.Minecraft;
 import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.client.gui.screens.ChatScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraftforge.client.event.RegisterClientCommandsEvent;
 import net.minecraftforge.client.event.RenderGuiOverlayEvent;
@@ -61,8 +62,16 @@ public class RimineForge {
 
   @SubscribeEvent
   public void onKeyPressed(ScreenEvent.KeyPressed.Pre event) {
-    // Intercept key press
+    if (!(event.getScreen() instanceof ChatScreen)) return;
     if (RimeInputHandler.handleKeyPress(event.getKeyCode(), event.getModifiers())) {
+      event.setCanceled(true);
+    }
+  }
+
+  @SubscribeEvent
+  public void onCharacterTyped(ScreenEvent.CharacterTyped.Pre event) {
+    if (!(event.getScreen() instanceof ChatScreen)) return;
+    if (RimeInputHandler.handleCharTyped(event.getCodePoint(), event.getModifiers())) {
       event.setCanceled(true);
     }
   }
