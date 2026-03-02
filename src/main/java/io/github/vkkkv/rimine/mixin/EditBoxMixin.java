@@ -29,14 +29,14 @@ public abstract class EditBoxMixin extends AbstractWidget {
       GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick, CallbackInfo ci) {
     if (this.isFocused()) {
       int x = this.getX() + 4;
-      int y = this.getY() + (this.height - 8) / 2;
 
       int start = Math.max(0, Math.min(this.displayPos, this.value.length()));
       int end = Math.max(start, Math.min(this.cursorPos, this.value.length()));
       String textBeforeCursor = this.value.substring(start, end);
       int cursorOffset = this.font.width(textBeforeCursor);
 
-      RimeInputHandler.setCursorPosition(x + cursorOffset, y + 10);
+      // Pass cursor X for horizontal tracking, box top Y for vertical anchoring
+      RimeInputHandler.setCursorPosition(x + cursorOffset, this.getY());
     }
   }
 
