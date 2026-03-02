@@ -14,7 +14,7 @@ public class RimineConfig {
   public float candidate_box_opacity = 0.66f;
   public String bg_color = "000000"; // Hex string for easier manual editing
   public int ui_offset_x = 0;
-  public int ui_offset_y = 10;
+  public int ui_offset_y = 0;
 
   public static RimineConfig get() {
     return instance;

@@ -15,7 +15,6 @@ import net.minecraft.client.gui.screens.ChatScreen;
 import net.minecraft.network.chat.Component;
 import static net.minecraft.commands.Commands.argument;
 import net.minecraftforge.client.event.RegisterClientCommandsEvent;
-import net.minecraftforge.client.event.RenderGuiOverlayEvent;
 import net.minecraftforge.client.event.ScreenEvent;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -218,12 +217,16 @@ public class RimineForge {
   }
 
   @SubscribeEvent
-  public void onRenderGui(RenderGuiOverlayEvent.Post event) {
+  public void onRenderGui(ScreenEvent.Render.Post event) {
     RimeInputHandler.RimeData data = RimeInputHandler.getCurrentData();
     if (data == null) return;
 
-    RimineConfig config = RimineConfig.get();
     Minecraft mc = Minecraft.getInstance();
+    if (!(mc.screen instanceof ChatScreen chatScreen)) return;
+    GuiEventListener focused = chatScreen.getFocused();
+    if (!(focused instanceof EditBox editBox)) return;
+
+    RimineConfig config = RimineConfig.get();
     List<String> candidates = data.candidates();
     String composition = data.composition() == null ? "" : data.composition();
     String pageInfo = "[" + (data.pageNo() + 1) + (data.isLastPage() ? "]" : "+]");
@@ -252,14 +255,11 @@ public class RimineForge {
 
     int screenWidth = mc.getWindow().getGuiScaledWidth();
     int screenHeight = mc.getWindow().getGuiScaledHeight();
-    int panelX =
-        Math.max(
-            2,
-            Math.min(data.x() + config.ui_offset_x, Math.max(2, screenWidth - panelWidth - 2)));
-    int panelY =
-        Math.max(
-            2,
-            Math.min(data.y() + config.ui_offset_y, Math.max(2, screenHeight - panelHeight - 2)));
+    // Anchor left to the EditBox left edge; bottom of panel sits just above it
+    int panelX = Math.min(editBox.getX() + config.ui_offset_x, screenWidth - panelWidth - 2);
+    panelX = Math.max(2, panelX);
+    int panelY = editBox.getY() - panelHeight - editBox.getHeight() - 2 + config.ui_offset_y;
+    panelY = Math.max(2, Math.min(panelY, screenHeight - panelHeight - 2));
 
     // Colors: Minecraft-inspired earth tones with warm accents
     int shadowColor = 0x4D000000;
