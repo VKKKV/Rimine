@@ -224,61 +224,123 @@ public class RimineForge {
 
     RimineConfig config = RimineConfig.get();
     Minecraft mc = Minecraft.getInstance();
-    int x = data.x() + config.ui_offset_x;
-    int y = data.y() + config.ui_offset_y;
-
     List<String> candidates = data.candidates();
+    String composition = data.composition() == null ? "" : data.composition();
+    String pageInfo = "[" + (data.pageNo() + 1) + (data.isLastPage() ? "]" : "+]");
+
     int lineHeight = mc.font.lineHeight + 2;
-    int width = 0;
+    int padX = 6;
+    int padY = 5;
+    int rowGap = 2;
 
-    if (data.composition() != null) {
-      width = mc.font.width(data.composition());
+    int contentWidth = mc.font.width(pageInfo);
+    if (!composition.isEmpty()) {
+      contentWidth = Math.max(contentWidth, mc.font.width(composition));
     }
+    if (data.isSwitcher()) {
+      contentWidth = Math.max(contentWidth, mc.font.width("Schema Selection"));
+    }
+    // Include "> " prefix width (widest prefix) so panel accommodates selected state
     for (int i = 0; i < candidates.size(); i++) {
-      String candidateText = "  " + (i + 1) + ". " + candidates.get(i);
-      width = Math.max(width, mc.font.width(candidateText));
+      contentWidth = Math.max(contentWidth, mc.font.width("> " + (i + 1) + ". " + candidates.get(i)));
     }
-    width += 6;
 
-    int height =
-        (candidates.size()
-                + (data.composition() != null ? 1 : 0)
-                + (data.isSwitcher() ? 1 : 0)
-                + 1)
-            * lineHeight
-            + 4;
+    int rowCount =
+        candidates.size() + 1 + (composition.isEmpty() ? 0 : 1) + (data.isSwitcher() ? 1 : 0);
+    int panelWidth = contentWidth + padX * 2;
+    int panelHeight = rowCount * lineHeight + padY * 2 - rowGap;
 
-    // Draw background using config
-    event
-        .getGuiGraphics()
-        .fill(x - 2, y - 2, x + width, y + height - 2, config.getResolvedBgColor());
+    int screenWidth = mc.getWindow().getGuiScaledWidth();
+    int screenHeight = mc.getWindow().getGuiScaledHeight();
+    int panelX =
+        Math.max(
+            2,
+            Math.min(data.x() + config.ui_offset_x, Math.max(2, screenWidth - panelWidth - 2)));
+    int panelY =
+        Math.max(
+            2,
+            Math.min(data.y() + config.ui_offset_y, Math.max(2, screenHeight - panelHeight - 2)));
 
-    int currentY = y;
+    // Colors: Minecraft-inspired earth tones with warm accents
+    int shadowColor = 0x4D000000;
+    int outerBorder = 0xFF1A1A1A;
+    int innerBorder = 0xFF555555;
+    int dividerColor = 0x6B3B2A14;
+    int panelBg = config.getResolvedBgColor();
+    int headerBg = 0x663B2A14;
+    int compositionBg = 0x55212121;
+    int selectedBg = 0x8848752B;
+    int selectedText = 0xFFF0F8A0;
+    int normalText = 0xFFE0E0E0;
+    int metaText = 0xFFAAAAAA;
+
+    // Draw subtle shadow for depth
+    event.getGuiGraphics().fill(panelX + 2, panelY + panelHeight, panelX + panelWidth - 1, panelY + panelHeight + 1, shadowColor);
+    event.getGuiGraphics().fill(panelX + panelWidth, panelY + 2, panelX + panelWidth + 1, panelY + panelHeight - 1, shadowColor);
+
+    // Draw layered borders for frame effect
+    event.getGuiGraphics().fill(panelX - 1, panelY - 1, panelX + panelWidth + 1, panelY + panelHeight + 1, outerBorder);
+    event.getGuiGraphics().fill(panelX, panelY, panelX + panelWidth, panelY + panelHeight, innerBorder);
+    event.getGuiGraphics().fill(panelX + 1, panelY + 1, panelX + panelWidth - 1, panelY + panelHeight - 1, panelBg);
+
+    int currentY = panelY + padY;
     if (data.isSwitcher()) {
       event
           .getGuiGraphics()
-          .drawString(mc.font, "§6Schema Selection:", x, currentY, 0xFFFFFF, false);
+          .fill(panelX + 2, currentY - 1, panelX + panelWidth - 2, currentY + mc.font.lineHeight + 1, headerBg);
+      event
+          .getGuiGraphics()
+          .drawString(mc.font, "Schema Selection", panelX + padX, currentY, 0xFFFFA500, true);
       currentY += lineHeight;
+      // Subtle divider after header
+      event.getGuiGraphics().fill(panelX + 3, currentY - padY + 1, panelX + panelWidth - 3, currentY - padY + 2, dividerColor);
     }
 
-    if (data.composition() != null) {
-      event.getGuiGraphics().drawString(mc.font, data.composition(), x, currentY, 0xEEEEEE, false);
+    if (!composition.isEmpty()) {
+      event
+          .getGuiGraphics()
+          .fill(
+              panelX + 2,
+              currentY - 1,
+              panelX + panelWidth - 2,
+              currentY + mc.font.lineHeight + 1,
+              compositionBg);
+      event
+          .getGuiGraphics()
+          .drawString(mc.font, composition, panelX + padX, currentY, 0xFFFFFFFF, false);
       currentY += lineHeight;
+      // Divider after composition
+      event.getGuiGraphics().fill(panelX + 3, currentY - padY + 1, panelX + panelWidth - 3, currentY - padY + 2, dividerColor);
     }
 
     for (int i = 0; i < candidates.size(); i++) {
-      int color = (i == data.highlightedIndex()) ? 0xFFFF55 : 0xBBBBBB;
-      String prefix = (i == data.highlightedIndex()) ? "> " : "  ";
+      boolean selected = i == data.highlightedIndex();
+      if (selected) {
+        event
+            .getGuiGraphics()
+            .fill(
+                panelX + 2,
+                currentY - 1,
+                panelX + panelWidth - 2,
+                currentY + mc.font.lineHeight + 1,
+                selectedBg);
+      }
+      String prefix = selected ? "> " : "  ";
+      int color = selected ? selectedText : normalText;
       event
           .getGuiGraphics()
           .drawString(
-              mc.font, prefix + (i + 1) + ". " + candidates.get(i), x, currentY, color, false);
+              mc.font,
+              prefix + (i + 1) + ". " + candidates.get(i),
+              panelX + padX,
+              currentY,
+              color,
+              false);
       currentY += lineHeight;
     }
 
-    // Page indicator
-    String pageInfo = "[" + (data.pageNo() + 1) + (data.isLastPage() ? "]" : "+]");
-    event.getGuiGraphics().drawString(mc.font, pageInfo, x, currentY, 0x777777, false);
+    int pageX = panelX + panelWidth - padX - mc.font.width(pageInfo);
+    event.getGuiGraphics().drawString(mc.font, pageInfo, pageX, currentY, metaText, false);
   }
 
   private void applyCommitToChat(ChatScreen chatScreen) {
