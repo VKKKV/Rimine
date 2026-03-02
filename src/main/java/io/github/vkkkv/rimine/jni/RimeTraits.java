@@ -2,7 +2,6 @@ package io.github.vkkkv.rimine.jni;
 
 import com.sun.jna.Pointer;
 import com.sun.jna.Structure;
-import java.util.Arrays;
 import java.util.List;
 
 public class RimeTraits extends Structure {
@@ -19,14 +18,15 @@ public class RimeTraits extends Structure {
 
   public RimeTraits() {
     super();
-    // 模拟 C 里的 RIME_STRUCT_INIT 宏，非常重要！告诉 C 侧这个结构体的大小，用于做 ABI 兼容校验
-    this.data_size = this.size();
+    // Mimic RIME_STRUCT_INIT: data_size = sizeof(Type) - sizeof(data_size)
+    int sz = this.size();
+    this.data_size = sz - 4; // sizeof(int) = 4
   }
 
   @Override
   protected List<String> getFieldOrder() {
-    // 这里的顺序必须和 rime_api.h 里的定义一模一样！
-    return Arrays.asList(
+    // Field order must match rime_api.h exactly.
+    return List.of(
         "data_size",
         "shared_data_dir",
         "user_data_dir",

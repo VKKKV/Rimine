@@ -3,7 +3,6 @@ package io.github.vkkkv.rimine.jni;
 import com.sun.jna.Callback;
 import com.sun.jna.Pointer;
 import com.sun.jna.Structure;
-import java.util.Arrays;
 import java.util.List;
 
 public class RimeApi extends Structure {
@@ -625,7 +624,7 @@ public class RimeApi extends Structure {
 
   @Override
   protected List<String> getFieldOrder() {
-    return Arrays.asList(
+    return List.of(
         "data_size",
         "setup",
         "set_notification_handler",

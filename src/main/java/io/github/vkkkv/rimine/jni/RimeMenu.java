@@ -2,7 +2,6 @@ package io.github.vkkkv.rimine.jni;
 
 import com.sun.jna.Pointer;
 import com.sun.jna.Structure;
-import java.util.Arrays;
 import java.util.List;
 
 @Structure.FieldOrder({
@@ -17,7 +16,7 @@ import java.util.List;
 public class RimeMenu extends Structure {
   public int page_size;
   public int page_no;
-  public boolean is_last_page;
+  public int is_last_page;
   public int highlighted_candidate_index;
   public int num_candidates;
   public Pointer candidates;
@@ -25,7 +24,7 @@ public class RimeMenu extends Structure {
 
   @Override
   protected List<String> getFieldOrder() {
-    return Arrays.asList(
+    return List.of(
         "page_size",
         "page_no",
         "is_last_page",

@@ -2,7 +2,6 @@ package io.github.vkkkv.rimine.jni;
 
 import com.sun.jna.Pointer;
 import com.sun.jna.Structure;
-import java.util.Arrays;
 import java.util.List;
 
 @Structure.FieldOrder({"ptr"})
@@ -11,6 +10,6 @@ public class RimeConfig extends Structure {
 
   @Override
   protected List<String> getFieldOrder() {
-    return Arrays.asList("ptr");
+    return List.of("ptr");
   }
 }
